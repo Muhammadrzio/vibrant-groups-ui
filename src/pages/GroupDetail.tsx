@@ -53,7 +53,12 @@ export default function GroupDetail() {
   const isOwner = group?.owner?.id === user?.id;
 
   const fetchGroupData = async () => {
-    if (!groupId) return;
+    if (!groupId) {
+      // Handle undefined groupId
+      toast.error('Invalid group ID');
+      navigate('/');
+      return;
+    }
     
     try {
       setIsLoading(true);
@@ -64,11 +69,13 @@ export default function GroupDetail() {
       
       // Fetch group items
       const itemsResponse = await api.get(`/groups/${groupId}/items`);
-      setItems(itemsResponse.data);
+      // Ensure items is always an array
+      setItems(Array.isArray(itemsResponse.data) ? itemsResponse.data : []);
       
       // Fetch group members
       const membersResponse = await api.get(`/groups/${groupId}/members`);
-      setMembers(membersResponse.data);
+      // Ensure members is always an array
+      setMembers(Array.isArray(membersResponse.data) ? membersResponse.data : []);
     } catch (error) {
       console.error('Failed to fetch group data:', error);
       toast.error('Failed to load group data');
@@ -179,11 +186,31 @@ export default function GroupDetail() {
     fetchGroupData();
   }, [groupId]);
 
+  // If groupId is undefined, redirect to home
+  useEffect(() => {
+    if (groupId === 'undefined' || !groupId) {
+      toast.error('Invalid group ID');
+      navigate('/');
+    }
+  }, [groupId, navigate]);
+
   if (isLoading) {
     return (
       <MainLayout>
         <div className="flex justify-center items-center min-h-[60vh]">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // If group is null after loading, show error
+  if (!group) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col justify-center items-center min-h-[60vh]">
+          <h2 className="text-xl font-semibold mb-4">Group not found</h2>
+          <Button onClick={() => navigate('/')}>Go Home</Button>
         </div>
       </MainLayout>
     );
@@ -287,7 +314,7 @@ export default function GroupDetail() {
               </div>
               
               <div className="divide-y">
-                {items.length > 0 ? (
+                {items && items.length > 0 ? (
                   items.map((item) => (
                     <ShoppingItem
                       key={item.id}
@@ -334,15 +361,21 @@ export default function GroupDetail() {
               </div>
               
               <div className="max-h-96 overflow-y-auto">
-                {members.map((member) => (
-                  <MemberItem
-                    key={member.id}
-                    member={member}
-                    groupId={groupId!}
-                    isOwner={isOwner}
-                    onMemberRemoved={fetchGroupData}
-                  />
-                ))}
+                {members && members.length > 0 ? (
+                  members.map((member) => (
+                    <MemberItem
+                      key={member.id}
+                      member={member}
+                      groupId={groupId!}
+                      isOwner={isOwner}
+                      onMemberRemoved={fetchGroupData}
+                    />
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-slate-500">
+                    No members found
+                  </div>
+                )}
               </div>
             </div>
           </div>
