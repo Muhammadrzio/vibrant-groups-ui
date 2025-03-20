@@ -15,6 +15,8 @@ api.interceptors.request.use((config) => {
   // Add the token to the Authorization header if it exists
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    // Also add as x-auth-token as requested
+    config.headers['x-auth-token'] = token;
   }
   
   return config;
