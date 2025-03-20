@@ -10,15 +10,6 @@ import { Group } from '@/types';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { Search } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 
 export default function Index() {
   const { user } = useAuth();
@@ -28,10 +19,6 @@ export default function Index() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newGroupName, setNewGroupName] = useState('');
-  const [newGroupPassword, setNewGroupPassword] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
 
   const fetchMyGroups = async () => {
     try {
@@ -61,28 +48,6 @@ export default function Index() {
       toast.error('Failed to search groups');
     } finally {
       setIsSearching(false);
-    }
-  };
-
-  const handleCreateGroup = async () => {
-    if (!newGroupName.trim()) return;
-
-    try {
-      setIsCreating(true);
-      await api.post('/groups', {
-        name: newGroupName,
-        password: newGroupPassword,
-      });
-      toast.success(`Group "${newGroupName}" created successfully`);
-      setCreateDialogOpen(false);
-      setNewGroupName('');
-      setNewGroupPassword('');
-      fetchMyGroups();
-    } catch (error) {
-      console.error('Failed to create group:', error);
-      toast.error('Failed to create group');
-    } finally {
-      setIsCreating(false);
     }
   };
 
@@ -121,56 +86,6 @@ export default function Index() {
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
             </div>
-            
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="ml-2">Create Group</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create New Group</DialogTitle>
-                  <DialogDescription>
-                    Create a new shopping list group to share with others.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-4 space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="group-name" className="text-sm font-medium">
-                      Group Name
-                    </label>
-                    <Input
-                      id="group-name"
-                      placeholder="Enter group name"
-                      value={newGroupName}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="group-password" className="text-sm font-medium">
-                      Password (Optional)
-                    </label>
-                    <Input
-                      id="group-password"
-                      type="password"
-                      placeholder="Create a password for private groups"
-                      value={newGroupPassword}
-                      onChange={(e) => setNewGroupPassword(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    onClick={handleCreateGroup}
-                    disabled={isCreating || !newGroupName.trim()}
-                  >
-                    {isCreating ? 'Creating...' : 'Create Group'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
 
@@ -220,7 +135,7 @@ export default function Index() {
             <div className="bg-white rounded-lg shadow-sm p-8 text-center">
               <p className="text-slate-500">You don't have any groups yet.</p>
               <Button 
-                onClick={() => setCreateDialogOpen(true)}
+                onClick={() => document.dispatchEvent(new CustomEvent('open-create-group'))}
                 className="mt-4"
               >
                 Create Your First Group

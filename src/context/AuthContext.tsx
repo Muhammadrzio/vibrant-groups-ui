@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setToken(token);
       
       toast.success('Logged in successfully');
-      navigate('/');
+      navigate('/profile'); // Changed from '/' to '/profile'
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Invalid username or password');

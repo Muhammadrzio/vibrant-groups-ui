@@ -1,9 +1,10 @@
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from './Logo';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { 
   Settings, 
   LogOut, 
@@ -20,6 +21,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import api from '@/lib/api';
+import { Group } from '@/types';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -29,6 +41,50 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [groupsExpanded, setGroupsExpanded] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupPassword, setNewGroupPassword] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [isLoadingGroups, setIsLoadingGroups] = useState(true);
+
+  const fetchGroups = async () => {
+    try {
+      setIsLoadingGroups(true);
+      const response = await api.get('/groups');
+      setGroups(response.data);
+    } catch (error) {
+      console.error('Failed to fetch groups:', error);
+    } finally {
+      setIsLoadingGroups(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGroups();
+  }, []);
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return;
+
+    try {
+      setIsCreating(true);
+      await api.post('/groups', {
+        name: newGroupName,
+        password: newGroupPassword,
+      });
+      toast.success(`Group "${newGroupName}" created successfully`);
+      setCreateDialogOpen(false);
+      setNewGroupName('');
+      setNewGroupPassword('');
+      fetchGroups();
+    } catch (error) {
+      console.error('Failed to create group:', error);
+      toast.error('Failed to create group');
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-slate-100">
@@ -62,14 +118,28 @@ export function MainLayout({ children }: MainLayoutProps) {
 
             {groupsExpanded && (
               <div className="ml-4 space-y-1">
-                {/* This will be populated dynamically */}
+                {isLoadingGroups ? (
+                  <div className="text-sm text-slate-500 py-1">Loading...</div>
+                ) : groups.length > 0 ? (
+                  groups.map((group) => (
+                    <div 
+                      key={group.id}
+                      className="py-1 px-2 text-sm hover:bg-slate-50 rounded cursor-pointer"
+                      onClick={() => navigate(`/groups/${group.id}`)}
+                    >
+                      {group.name}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-slate-500 py-1">No groups yet</div>
+                )}
               </div>
             )}
 
             <Button 
               variant="outline" 
               className="w-full justify-start mt-4"
-              onClick={() => navigate('/create-group')}
+              onClick={() => setCreateDialogOpen(true)}
             >
               <span className="mr-2">+</span> Create Group
             </Button>
@@ -114,6 +184,54 @@ export function MainLayout({ children }: MainLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Create Group Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Group</DialogTitle>
+            <DialogDescription>
+              Create a new shopping list group to share with others.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="group-name" className="text-sm font-medium">
+                Group Name
+              </label>
+              <Input
+                id="group-name"
+                placeholder="Enter group name"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="group-password" className="text-sm font-medium">
+                Password (Optional)
+              </label>
+              <Input
+                id="group-password"
+                type="password"
+                placeholder="Create a password for private groups"
+                value={newGroupPassword}
+                onChange={(e) => setNewGroupPassword(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateGroup}
+              disabled={isCreating || !newGroupName.trim()}
+            >
+              {isCreating ? 'Creating...' : 'Create Group'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
